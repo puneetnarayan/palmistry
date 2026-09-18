@@ -4,6 +4,9 @@ import { generateReading } from "./rules.js";
 
 const dropzone = document.getElementById("dropzone");
 const fileInput = document.getElementById("file-input");
+const cameraInput = document.getElementById("camera-input");
+const chooseFileBtn = document.getElementById("choose-file-btn");
+const takePhotoBtn = document.getElementById("take-photo-btn");
 const previewWrap = document.getElementById("preview-wrap");
 const previewImg = document.getElementById("preview-img");
 const validationMsg = document.getElementById("validation-msg");
@@ -16,8 +19,36 @@ const readingText = document.getElementById("reading-text");
 const lowConfidenceMsg = document.getElementById("low-confidence-msg");
 const resetBtn = document.getElementById("reset-btn");
 const uploadSection = document.getElementById("upload-section");
+const errorSection = document.getElementById("error-section");
+const errorText = document.getElementById("error-text");
+const retryBtn = document.getElementById("retry-btn");
+const errorResetBtn = document.getElementById("error-reset-btn");
+const unsupportedBanner = document.getElementById("unsupported-banner");
 
 let sanitizedCanvas = null;
+
+function checkBrowserSupport() {
+  const supported =
+    typeof window.WebAssembly === "object" &&
+    typeof window.File === "function" &&
+    typeof window.FileReader === "function" &&
+    typeof HTMLCanvasElement.prototype.getContext === "function";
+  if (!supported) {
+    unsupportedBanner.classList.remove("hidden");
+    chooseFileBtn.disabled = true;
+    takePhotoBtn.disabled = true;
+  }
+  return supported;
+}
+checkBrowserSupport();
+
+function showError(message) {
+  uploadSection.classList.add("hidden");
+  progressSection.classList.add("hidden");
+  resultsSection.classList.add("hidden");
+  errorText.textContent = message;
+  errorSection.classList.remove("hidden");
+}
 
 function showValidation(result) {
   validationMsg.textContent = result.ok ? "Looks good — ready to analyze." : result.message;
@@ -56,6 +87,15 @@ async function handleFile(file) {
   showValidation({ ok: true });
 }
 
+chooseFileBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  fileInput.click();
+});
+takePhotoBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  cameraInput.click();
+});
+
 dropzone.addEventListener("click", () => fileInput.click());
 dropzone.addEventListener("keydown", (e) => {
   if (e.key === "Enter" || e.key === " ") fileInput.click();
@@ -77,13 +117,19 @@ fileInput.addEventListener("change", () => {
   const file = fileInput.files[0];
   if (file) handleFile(file);
 });
+cameraInput.addEventListener("change", () => {
+  const file = cameraInput.files[0];
+  if (file) handleFile(file);
+});
 
-analyzeBtn.addEventListener("click", async () => {
+async function runAnalysis() {
   if (!sanitizedCanvas) return;
 
   uploadSection.classList.add("hidden");
+  errorSection.classList.add("hidden");
   progressSection.classList.remove("hidden");
   resultsSection.classList.add("hidden");
+  progressText.textContent = "Loading vision engine…";
 
   try {
     const { features, annotated, confidence } = await analyzePalm(sanitizedCanvas, (msg) => {
@@ -102,8 +148,17 @@ analyzeBtn.addEventListener("click", async () => {
     progressSection.classList.add("hidden");
     resultsSection.classList.remove("hidden");
   } catch (err) {
-    progressText.textContent = "Something went wrong: " + err.message;
+    progressSection.classList.add("hidden");
+    showError(err.message || "An unexpected error occurred during analysis.");
   }
+}
+
+analyzeBtn.addEventListener("click", runAnalysis);
+retryBtn.addEventListener("click", runAnalysis);
+
+errorResetBtn.addEventListener("click", () => {
+  errorSection.classList.add("hidden");
+  resetBtn.click();
 });
 
 function renderReading(reading) {
@@ -134,6 +189,7 @@ function renderReading(reading) {
 resetBtn.addEventListener("click", () => {
   sanitizedCanvas = null;
   fileInput.value = "";
+  cameraInput.value = "";
   previewWrap.classList.add("hidden");
   previewImg.removeAttribute("src");
   validationMsg.textContent = "";

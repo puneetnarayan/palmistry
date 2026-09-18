@@ -116,6 +116,20 @@ body {
 
 .dropzone .hint { font-size: 0.8rem; margin-top: 8px; }
 
+.upload-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.secondary-btn.small {
+  margin: 0;
+  padding: 8px 18px;
+  font-size: 0.85rem;
+}
+
 .tips {
   color: var(--text-dim);
   font-size: 0.85rem;
@@ -233,6 +247,25 @@ body {
   margin-top: 16px;
   color: var(--warn);
 }
+
+.error-text {
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.error-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.error-actions .primary-btn,
+.error-actions .secondary-btn {
+  margin: 0;
+}
+
+.warning.hidden { display: none !important; }
 
 .site-footer {
   text-align: center;
