@@ -1,0 +1,12 @@
+{
+  "name": "Palm Reader",
+  "short_name": "Palm Reader",
+  "description": "Traditional palmistry-style readings from a palm photo, analyzed entirely in your browser.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#14121a",
+  "theme_color": "#14121a",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

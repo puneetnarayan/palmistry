@@ -3,15 +3,37 @@
 // image-processing approximation used purely to drive the traditional-palmistry
 // rules engine in rules.js.
 
-function waitForOpenCV(timeoutMs = 15000) {
-  return new Promise((resolve, reject) => {
-    const start = Date.now();
-    (function check() {
-      if (window.cv && window.cv.Mat) return resolve(window.cv);
-      if (Date.now() - start > timeoutMs) return reject(new Error("Vision engine failed to load."));
-      setTimeout(check, 100);
-    })();
+const OPENCV_URL = "https://docs.opencv.org/4.9.0/opencv.js";
+let openCvLoadPromise = null;
+
+function loadOpenCVScript() {
+  if (openCvLoadPromise) return openCvLoadPromise;
+
+  openCvLoadPromise = new Promise((resolve, reject) => {
+    if (window.cv && window.cv.Mat) return resolve(window.cv);
+
+    const script = document.createElement("script");
+    script.src = OPENCV_URL;
+    script.async = true;
+    script.onerror = () => {
+      openCvLoadPromise = null;
+      reject(new Error("Could not load the vision engine. Check your connection and try again."));
+    };
+    // opencv.js calls this once its WASM runtime has finished initializing.
+    window.Module = { onRuntimeInitialized: () => resolve(window.cv) };
+    document.head.appendChild(script);
   });
+
+  return openCvLoadPromise;
+}
+
+function waitForOpenCV(timeoutMs = 20000) {
+  return Promise.race([
+    loadOpenCVScript(),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Vision engine timed out loading. Please try again.")), timeoutMs)
+    ),
+  ]);
 }
 
 // Zones are expressed as fractional boxes [x0,y0,x1,y1] over the analysis canvas,
