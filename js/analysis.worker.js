@@ -36,14 +36,15 @@ function withTimeout(promise, timeoutMs, message) {
   ]);
 }
 
-// Zones are expressed as fractional boxes [x0,y0,x1,y1] over the analysis canvas,
-// approximating where each classical line tends to sit on a right hand, palm facing up,
-// fingers pointing up. This is a coarse heuristic, not hand-geometry detection.
+// Zones are expressed as fractional boxes [x0,y0,x1,y1] relative to the detected
+// hand bounding box (not the full photo), approximating where each classical line
+// tends to sit on a palm-up hand. This is a coarse heuristic, not true hand-pose
+// detection, and assumes a roughly upright, unrotated hand.
 const ZONES = {
-  heart: { box: [0.1, 0.12, 0.95, 0.32], angleRange: [-20, 20] },
-  head: { box: [0.08, 0.32, 0.85, 0.55], angleRange: [-15, 15] },
-  life: { box: [0.15, 0.25, 0.55, 0.85], angleRange: [40, 90] },
-  fate: { box: [0.35, 0.15, 0.65, 0.9], angleRange: [70, 110] },
+  heart: { box: [0.05, 0.28, 0.95, 0.42], angleRange: [-25, 25] },
+  head: { box: [0.05, 0.4, 0.85, 0.55], angleRange: [-20, 20] },
+  life: { box: [0.05, 0.3, 0.55, 0.9], angleRange: [30, 90] },
+  fate: { box: [0.35, 0.3, 0.65, 0.95], angleRange: [65, 90] },
 };
 
 function segmentAngleDeg(x1, y1, x2, y2) {
@@ -59,17 +60,82 @@ function segmentLength(x1, y1, x2, y2) {
   return Math.hypot(x2 - x1, y2 - y1);
 }
 
-function inBox(x, y, box, w, h) {
-  return x >= box[0] * w && x <= box[2] * w && y >= box[1] * h && y <= box[3] * h;
+function inBox(x, y, box, origin, w, h) {
+  return (
+    x >= origin.x + box[0] * w &&
+    x <= origin.x + box[2] * w &&
+    y >= origin.y + box[1] * h &&
+    y <= origin.y + box[3] * h
+  );
 }
 
 function angleInRange(angle, range) {
   return angle >= range[0] && angle <= range[1];
 }
 
+// OpenCV.js's HoughLinesP result Mat can pack all N detected segments into a
+// single row of N columns rather than N rows of 1 column, depending on build.
+// Reading by total element count (not .rows) works regardless of that layout.
+function readLineSegments(lines) {
+  const count = (lines.data32S.length / 4) | 0;
+  const segments = [];
+  for (let i = 0; i < count; i++) {
+    const [x1, y1, x2, y2] = lines.data32S.slice(i * 4, i * 4 + 4);
+    segments.push({ x1, y1, x2, y2, angle: segmentAngleDeg(x1, y1, x2, y2), length: segmentLength(x1, y1, x2, y2) });
+  }
+  return segments;
+}
+
+// Finds the largest skin-colored region via YCrCb thresholding and returns its
+// bounding box. Zones are matched relative to this box rather than the full
+// photo, since a casual palm photo rarely fills the whole frame.
+function detectHandBoundingBox(cv, src, w, h) {
+  const ycrcb = new cv.Mat();
+  cv.cvtColor(src, ycrcb, cv.COLOR_RGBA2RGB);
+  cv.cvtColor(ycrcb, ycrcb, cv.COLOR_RGB2YCrCb);
+
+  const low = new cv.Mat(h, w, ycrcb.type(), [0, 133, 77, 0]);
+  const high = new cv.Mat(h, w, ycrcb.type(), [255, 173, 127, 255]);
+  const mask = new cv.Mat();
+  cv.inRange(ycrcb, low, high, mask);
+
+  const kernel = cv.Mat.ones(7, 7, cv.CV_8U);
+  cv.morphologyEx(mask, mask, cv.MORPH_OPEN, kernel);
+  cv.morphologyEx(mask, mask, cv.MORPH_CLOSE, kernel);
+
+  const contours = new cv.MatVector();
+  const hierarchy = new cv.Mat();
+  cv.findContours(mask, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+  let box = { x: 0, y: 0, width: w, height: h };
+  let bestArea = 0;
+  for (let i = 0; i < contours.size(); i++) {
+    const contour = contours.get(i);
+    const area = cv.contourArea(contour);
+    if (area > bestArea) {
+      bestArea = area;
+      box = cv.boundingRect(contour);
+    }
+    contour.delete();
+  }
+
+  [ycrcb, low, high, mask, kernel, hierarchy].forEach((m) => m.delete());
+  contours.delete();
+
+  // Fall back to the full frame if skin detection found nothing usable
+  // (e.g. unusual lighting) rather than producing a degenerate zero-size box.
+  if (bestArea < w * h * 0.02) {
+    return { x: 0, y: 0, width: w, height: h };
+  }
+  return box;
+}
+
 function detectLines(cv, imageData) {
   const { width: w, height: h } = imageData;
   const src = cv.matFromImageData(imageData);
+
+  const handBox = detectHandBoundingBox(cv, src, w, h);
+
   const gray = new cv.Mat();
   cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
 
@@ -83,22 +149,27 @@ function detectLines(cv, imageData) {
   cv.Canny(enhanced, edges, 40, 120);
 
   const lines = new cv.Mat();
-  const minLineLength = Math.round(Math.min(w, h) * 0.08);
-  const maxLineGap = Math.round(Math.min(w, h) * 0.02);
-  cv.HoughLinesP(edges, lines, 1, Math.PI / 180, 40, minLineLength, maxLineGap);
+  const minLineLength = Math.round(Math.min(w, h) * 0.03);
+  const maxLineGap = Math.round(Math.min(w, h) * 0.015);
+  cv.HoughLinesP(edges, lines, 1, Math.PI / 180, 30, minLineLength, maxLineGap);
 
-  const segments = [];
-  for (let i = 0; i < lines.rows; i++) {
-    const [x1, y1, x2, y2] = lines.data32S.slice(i * 4, i * 4 + 4);
-    segments.push({ x1, y1, x2, y2, angle: segmentAngleDeg(x1, y1, x2, y2), length: segmentLength(x1, y1, x2, y2) });
-  }
+  const margin = 5;
+  const origin = { x: handBox.x - margin, y: handBox.y - margin };
+  const boxW = handBox.width + margin * 2;
+  const boxH = handBox.height + margin * 2;
+
+  const segments = readLineSegments(lines).filter((s) => {
+    const midX = (s.x1 + s.x2) / 2;
+    const midY = (s.y1 + s.y2) / 2;
+    return midX >= origin.x && midX <= origin.x + boxW && midY >= origin.y && midY <= origin.y + boxH;
+  });
 
   const features = {};
   for (const [name, zone] of Object.entries(ZONES)) {
     const matches = segments.filter((s) => {
       const midX = (s.x1 + s.x2) / 2;
       const midY = (s.y1 + s.y2) / 2;
-      return inBox(midX, midY, zone.box, w, h) && angleInRange(s.angle, zone.angleRange);
+      return inBox(midX, midY, zone.box, origin, boxW, boxH) && angleInRange(s.angle, zone.angleRange);
     });
 
     if (matches.length === 0) {
@@ -107,7 +178,7 @@ function detectLines(cv, imageData) {
     }
 
     const totalLength = matches.reduce((sum, s) => sum + s.length, 0);
-    const zoneDiag = Math.hypot((zone.box[2] - zone.box[0]) * w, (zone.box[3] - zone.box[1]) * h);
+    const zoneDiag = Math.hypot((zone.box[2] - zone.box[0]) * boxW, (zone.box[3] - zone.box[1]) * boxH);
     features[name] = {
       detected: true,
       segmentCount: matches.length,
