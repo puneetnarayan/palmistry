@@ -2,8 +2,10 @@
   "name": "palmistry",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Palm scan upload and rule-based palmistry interpretation app.",
   "scripts": {
-    "dev": "npx serve ."
+    "dev": "npx serve .",
+    "test": "node --test test/*.test.js"
   }
 }
