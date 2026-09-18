@@ -1,0 +1,9 @@
+{
+  "name": "palmistry",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Palm scan upload and rule-based palmistry interpretation app.",
+  "scripts": {
+    "dev": "npx serve ."
+  }
+}

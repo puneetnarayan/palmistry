@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Palm Reader — Hand Scan Analysis</title>
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>Palm Reader</h1>
+    <p class="tagline">Upload a photo of your palm and get a traditional palmistry-style reading.</p>
+  </header>
+
+  <main class="container">
+    <section class="mode-select" aria-label="Analysis mode">
+      <button id="mode-client" class="mode-btn active" data-mode="client">
+        Option A — Client-side
+        <span class="mode-sub">Runs entirely in your browser. No upload leaves your device.</span>
+      </button>
+      <button id="mode-server" class="mode-btn disabled" data-mode="server" disabled>
+        Option B — Server-side
+        <span class="mode-sub">Coming soon. Heavier analysis via a backend API.</span>
+      </button>
+    </section>
+
+    <section class="disclaimer" role="note">
+      Palmistry is a traditional practice, not a scientifically validated method of predicting
+      personality or events. This app is for entertainment and educational purposes only.
+    </section>
+
+    <section id="upload-section" class="card">
+      <h2>1. Upload your palm photo</h2>
+      <div id="dropzone" class="dropzone" tabindex="0" role="button" aria-label="Upload palm photo">
+        <p>Drag &amp; drop an image here, or click to choose a file</p>
+        <p class="hint">JPEG, PNG or WebP · min 800×800px · max 10MB · one hand per photo</p>
+        <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" hidden />
+      </div>
+      <ul class="tips">
+        <li>Use even, diffused lighting — avoid harsh shadows or glare</li>
+        <li>Flatten your palm, spread your fingers, keep the whole hand in frame</li>
+        <li>Shoot against a plain, high-contrast background</li>
+        <li>Make sure the photo is in focus</li>
+      </ul>
+      <div id="preview-wrap" class="preview-wrap hidden">
+        <div class="preview-guide">
+          <img id="preview-img" alt="Palm preview" />
+          <svg id="hand-outline" class="hand-outline" viewBox="0 0 300 400" aria-hidden="true">
+            <path d="M150 380 C 90 380 70 320 70 260 L 70 120 C 70 105 82 95 95 95 C 108 95 118 108 118 122 L 118 200 L 122 200 L 122 60 C 122 45 134 34 148 34 C 162 34 174 45 174 60 L 174 200 L 178 200 L 178 50 C 178 36 189 25 203 25 C 217 25 228 36 228 50 L 228 200 L 232 200 L 232 90 C 232 78 242 68 254 68 C 266 68 276 78 276 90 L 276 250 C 276 320 230 380 150 380 Z"
+              fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="3" stroke-dasharray="6 4" />
+          </svg>
+        </div>
+        <div id="validation-msg" class="validation-msg"></div>
+        <button id="analyze-btn" class="primary-btn" disabled>2. Analyze my palm</button>
+      </div>
+    </section>
+
+    <section id="progress-section" class="card hidden">
+      <h2>Analyzing…</h2>
+      <div class="spinner" aria-hidden="true"></div>
+      <p id="progress-text">Loading vision engine…</p>
+    </section>
+
+    <section id="results-section" class="card hidden">
+      <h2>Your reading</h2>
+      <div class="results-layout">
+        <canvas id="annotated-canvas"></canvas>
+        <div id="reading-text" class="reading-text"></div>
+      </div>
+      <div id="low-confidence-msg" class="warning hidden">
+        Detection confidence was low for this photo. For a clearer reading, retake it following
+        the tips above and try again.
+      </div>
+      <button id="reset-btn" class="secondary-btn">Analyze another photo</button>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>No images are uploaded or stored — all processing happens locally in your browser (Option A).</p>
+  </footer>
+
+  <script src="https://docs.opencv.org/4.9.0/opencv.js" async></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
