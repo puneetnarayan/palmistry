@@ -6,6 +6,10 @@
   "description": "Palm scan upload and rule-based palmistry interpretation app.",
   "scripts": {
     "dev": "npx serve .",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "vendor:opencv": "cp node_modules/@techstark/opencv-js/dist/opencv.js vendor/opencv.js"
+  },
+  "devDependencies": {
+    "@techstark/opencv-js": "5.0.0-release.1"
   }
 }

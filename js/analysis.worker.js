@@ -1,27 +1,30 @@
 // Runs OpenCV.js off the main thread so a slow network or heavy computation
 // never freezes the page. Classic (non-module) worker so importScripts works
-// with opencv.js's UMD build.
+// with opencv.js's UMD build. The build is vendored into /vendor/opencv.js and
+// served from this app's own origin, rather than fetched from an external CDN,
+// so it isn't subject to third-party network slowness or filtering.
 
-const OPENCV_URL = "https://docs.opencv.org/4.9.0/opencv.js";
+const OPENCV_URL = new URL("../vendor/opencv.js", location.href).href;
 let cvReadyPromise = null;
 
 function loadOpenCV() {
   if (cvReadyPromise) return cvReadyPromise;
 
-  cvReadyPromise = new Promise((resolve, reject) => {
-    if (self.cv && self.cv.Mat) return resolve(self.cv);
-
-    self.Module = {
-      onRuntimeInitialized: () => resolve(self.cv),
-    };
+  cvReadyPromise = (async () => {
+    if (self.cv && typeof self.cv.Mat === "function") return self.cv;
 
     try {
       importScripts(OPENCV_URL);
     } catch (err) {
       cvReadyPromise = null;
-      reject(new Error("Could not load the vision engine. Check your connection and try again."));
+      throw new Error("Could not load the vision engine. Check your connection and try again.");
     }
-  });
+
+    // This build's UMD wrapper sets self.cv to a Promise that resolves once
+    // the WASM runtime has finished initializing.
+    self.cv = await self.cv;
+    return self.cv;
+  })();
 
   return cvReadyPromise;
 }
