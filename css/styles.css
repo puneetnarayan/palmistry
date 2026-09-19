@@ -211,6 +211,7 @@ body {
 
 .results-layout {
   display: flex;
+  align-items: flex-start;
   gap: 24px;
   flex-wrap: wrap;
 }
@@ -218,6 +219,7 @@ body {
 #annotated-canvas {
   max-width: 280px;
   width: 100%;
+  height: auto;
   border-radius: 10px;
   background: #000;
 }

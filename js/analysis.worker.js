@@ -86,10 +86,13 @@ function readLineSegments(lines) {
   return segments;
 }
 
-// Finds the largest skin-colored region via YCrCb thresholding and returns its
-// bounding box. Zones are matched relative to this box rather than the full
-// photo, since a casual palm photo rarely fills the whole frame.
-function detectHandBoundingBox(cv, src, w, h) {
+// Finds the largest skin-colored region via YCrCb thresholding. Returns its
+// bounding box plus an eroded version of the mask (shrunk inward so the
+// hand's own silhouette edge - by far the strongest edge in most photos - is
+// excluded from crease detection). Zones are matched relative to the box
+// rather than the full photo, since a casual palm photo rarely fills the
+// whole frame.
+function detectHandRegion(cv, src, w, h) {
   const ycrcb = new cv.Mat();
   cv.cvtColor(src, ycrcb, cv.COLOR_RGBA2RGB);
   cv.cvtColor(ycrcb, ycrcb, cv.COLOR_RGB2YCrCb);
@@ -119,39 +122,55 @@ function detectHandBoundingBox(cv, src, w, h) {
     contour.delete();
   }
 
-  [ycrcb, low, high, mask, kernel, hierarchy].forEach((m) => m.delete());
+  const erodeKernel = cv.Mat.ones(15, 15, cv.CV_8U);
+  const erodedMask = new cv.Mat();
+  cv.erode(mask, erodedMask, erodeKernel);
+
+  [ycrcb, low, high, mask, kernel, erodeKernel, hierarchy].forEach((m) => m.delete());
   contours.delete();
 
   // Fall back to the full frame if skin detection found nothing usable
   // (e.g. unusual lighting) rather than producing a degenerate zero-size box.
   if (bestArea < w * h * 0.02) {
-    return { x: 0, y: 0, width: w, height: h };
+    box = { x: 0, y: 0, width: w, height: h };
   }
-  return box;
+  return { box, erodedMask };
 }
 
 function detectLines(cv, imageData) {
   const { width: w, height: h } = imageData;
   const src = cv.matFromImageData(imageData);
 
-  const handBox = detectHandBoundingBox(cv, src, w, h);
+  const { box: handBox, erodedMask } = detectHandRegion(cv, src, w, h);
 
   const gray = new cv.Mat();
   cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
 
-  const blurred = new cv.Mat();
-  cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+  // Black-hat morphology picks out thin dark ridges (palm creases) on a
+  // lighter background (palm skin) - a much better fit than generic edge
+  // detection, which mainly picks up the hand's own silhouette instead of
+  // the low-contrast creases inside it.
+  const handMinDim = Math.min(handBox.width, handBox.height);
+  const kernelSize = Math.max(9, Math.round(handMinDim * 0.045)) | 1;
+  const morphKernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, new cv.Size(kernelSize, kernelSize));
+  const blackhat = new cv.Mat();
+  cv.morphologyEx(gray, blackhat, cv.MORPH_BLACKHAT, morphKernel);
 
-  const enhanced = new cv.Mat();
-  cv.equalizeHist(blurred, enhanced);
+  // Zero out anything outside the eroded hand mask so background clutter and
+  // the hand's silhouette edge can't be picked up as false creases.
+  const masked = new cv.Mat();
+  blackhat.copyTo(masked, erodedMask);
 
-  const edges = new cv.Mat();
-  cv.Canny(enhanced, edges, 40, 120);
+  const binary = new cv.Mat();
+  cv.threshold(masked, binary, 25, 255, cv.THRESH_BINARY);
+  const dilateKernel = cv.Mat.ones(2, 2, cv.CV_8U);
+  cv.dilate(binary, binary, dilateKernel);
 
   const lines = new cv.Mat();
-  const minLineLength = Math.round(Math.min(w, h) * 0.03);
-  const maxLineGap = Math.round(Math.min(w, h) * 0.015);
-  cv.HoughLinesP(edges, lines, 1, Math.PI / 180, 30, minLineLength, maxLineGap);
+  const minLineLength = Math.max(10, Math.round(handMinDim * 0.065));
+  const maxLineGap = Math.max(4, Math.round(handMinDim * 0.025));
+  const houghThreshold = Math.max(8, Math.round(minLineLength * 0.9));
+  cv.HoughLinesP(binary, lines, 1, Math.PI / 180, houghThreshold, minLineLength, maxLineGap);
 
   const margin = 5;
   const origin = { x: handBox.x - margin, y: handBox.y - margin };
@@ -177,13 +196,18 @@ function detectLines(cv, imageData) {
       continue;
     }
 
+    // The longest single matched segment approximates "how long the line
+    // looks" much better than summing every matched fragment: a zone with
+    // lots of short, noisy fragments would otherwise score as artificially
+    // "long" just from noise volume, not from any one real crease.
     const totalLength = matches.reduce((sum, s) => sum + s.length, 0);
+    const maxSegmentLength = matches.reduce((max, s) => Math.max(max, s.length), 0);
     const zoneDiag = Math.hypot((zone.box[2] - zone.box[0]) * boxW, (zone.box[3] - zone.box[1]) * boxH);
     features[name] = {
       detected: true,
       segmentCount: matches.length,
       totalLength,
-      lengthRatio: Math.min(1, totalLength / zoneDiag),
+      lengthRatio: Math.min(1, maxSegmentLength / zoneDiag),
       segments: matches,
     };
   }
@@ -191,7 +215,7 @@ function detectLines(cv, imageData) {
   const detectedCount = Object.values(features).filter((f) => f.detected).length;
   const confidence = detectedCount / Object.keys(ZONES).length;
 
-  [src, gray, blurred, enhanced, edges, lines].forEach((m) => m.delete());
+  [src, gray, morphKernel, blackhat, erodedMask, masked, binary, dilateKernel, lines].forEach((m) => m.delete());
 
   return { features, confidence };
 }

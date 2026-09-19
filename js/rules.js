@@ -24,7 +24,7 @@ export function generateReading(features, confidence) {
       text = rule.notDetected;
     } else {
       text = rule[lengthBin(f.lengthRatio)];
-      if (f.segmentCount >= 3) {
+      if (f.segmentCount >= 5) {
         text += rule.broken;
       }
     }

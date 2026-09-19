@@ -27,9 +27,9 @@ test("long, unbroken line does not append the broken-line note", () => {
   assert.doesNotMatch(head.text, /Breaks along the line/);
 });
 
-test("fragmented line (segmentCount >= 3) appends the broken-line note", () => {
+test("fragmented line (segmentCount >= 5) appends the broken-line note", () => {
   const reading = generateReading(
-    { life: { detected: true, lengthRatio: 0.5, segmentCount: 4 } },
+    { life: { detected: true, lengthRatio: 0.5, segmentCount: 6 } },
     0.9
   );
   const life = reading.sections.find((s) => s.key === "life");
