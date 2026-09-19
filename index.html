@@ -20,6 +20,7 @@
     <nav class="view-tabs" aria-label="View">
       <button id="tab-reader" class="view-tab active" data-view="reader" aria-pressed="true">Palm Reader</button>
       <button id="tab-guide" class="view-tab" data-view="guide" aria-pressed="false">Guide</button>
+      <button id="tab-features" class="view-tab" data-view="features" aria-pressed="false">Features</button>
     </nav>
 
     <div id="reader-view">
@@ -119,6 +120,14 @@
         "straight vs. curved" mean for each — the same vocabulary your reading uses.
       </p>
       <div id="guide-grid" class="guide-grid"></div>
+    </section>
+
+    <section id="features-view" class="hidden">
+      <p class="guide-intro">
+        A plain list of what this app actually analyzes about a detected line — the raw signals
+        behind the wording in your reading, with no images.
+      </p>
+      <div id="features-content"></div>
     </section>
   </main>
 

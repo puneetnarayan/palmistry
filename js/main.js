@@ -2,6 +2,7 @@ import { validateFile, loadImageFromFile, validateDimensions, sanitizeToCanvas }
 import { analyzePalm, renderAnnotation, renderTrace } from "./analysis.js";
 import { generateReading } from "./rules.js";
 import { renderGuide } from "./guide.js";
+import { renderFeaturesTab } from "./features.js";
 
 const dropzone = document.getElementById("dropzone");
 const fileInput = document.getElementById("file-input");
@@ -281,24 +282,26 @@ document.getElementById("mode-client").addEventListener("click", (e) => {
   e.currentTarget.classList.add("active");
 });
 
-// View tabs — Palm Reader (the main flow above) vs. Guide (static reference content).
-const tabReader = document.getElementById("tab-reader");
-const tabGuide = document.getElementById("tab-guide");
-const readerView = document.getElementById("reader-view");
-const guideView = document.getElementById("guide-view");
-const guideGrid = document.getElementById("guide-grid");
+// View tabs — Palm Reader (the main flow above), Guide (static reference
+// content), and Features (fetched on demand, see js/features.js).
+const VIEWS = ["reader", "guide", "features"];
+const tabs = Object.fromEntries(VIEWS.map((v) => [v, document.getElementById(`tab-${v}`)]));
+const views = Object.fromEntries(VIEWS.map((v) => [v, document.getElementById(`${v}-view`)]));
 
-renderGuide(guideGrid);
+renderGuide(document.getElementById("guide-grid"));
 
 function setView(view) {
-  const showGuide = view === "guide";
-  readerView.classList.toggle("hidden", showGuide);
-  guideView.classList.toggle("hidden", !showGuide);
-  tabReader.classList.toggle("active", !showGuide);
-  tabGuide.classList.toggle("active", showGuide);
-  tabReader.setAttribute("aria-pressed", String(!showGuide));
-  tabGuide.setAttribute("aria-pressed", String(showGuide));
+  for (const v of VIEWS) {
+    const isActive = v === view;
+    views[v]?.classList.toggle("hidden", !isActive);
+    tabs[v].classList.toggle("active", isActive);
+    tabs[v].setAttribute("aria-pressed", String(isActive));
+  }
+  if (view === "features") {
+    renderFeaturesTab(document.getElementById("features-content"));
+  }
 }
 
-tabReader.addEventListener("click", () => setView("reader"));
-tabGuide.addEventListener("click", () => setView("guide"));
+for (const v of VIEWS) {
+  tabs[v].addEventListener("click", () => setView(v));
+}

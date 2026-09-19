@@ -114,6 +114,43 @@ body {
   margin: 0;
 }
 
+.features-section {
+  margin-bottom: 24px;
+}
+
+.features-section h3 {
+  font-size: 1.05rem;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #2c273b;
+}
+
+.features-item {
+  margin-bottom: 14px;
+}
+
+.features-item h4 {
+  font-size: 0.9rem;
+  margin: 0 0 4px;
+  color: var(--accent-2);
+}
+
+.features-item p {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.features-status {
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+.features-status.error {
+  color: var(--warn);
+}
+
 .mode-select {
   display: flex;
   gap: 12px;

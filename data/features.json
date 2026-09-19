@@ -1,0 +1,38 @@
+{
+  "sections": [
+    {
+      "heading": "Per-line traits",
+      "items": [
+        {
+          "name": "Detection",
+          "description": "Whether a given line (Heart, Head, Life, or Fate) was found at all in your photo. If none of a line's expected area matched, the reading says so rather than guessing."
+        },
+        {
+          "name": "Length",
+          "description": "Classified as short, medium, or long, based on the longest single continuous piece found for that line relative to the area it's expected to occupy on the palm."
+        },
+        {
+          "name": "Shape",
+          "description": "Classified as straight or curved, based on how much the detected pieces of that line point in different directions. A wide spread of angles reads as curved; a narrow spread reads as straight. Only judged when enough pieces were found to tell."
+        },
+        {
+          "name": "Fragmentation",
+          "description": "When a line is found as many separate short pieces rather than one continuous stroke, the reading notes it as \"broken\" or interrupted, rather than one steady line."
+        }
+      ]
+    },
+    {
+      "heading": "Overall reading",
+      "items": [
+        {
+          "name": "Confidence",
+          "description": "A high / medium / low score based on how many of the four lines were clearly detected in your photo. Low confidence usually means retaking the photo (better lighting, flatter palm, closer framing) would help."
+        },
+        {
+          "name": "Overall pattern",
+          "description": "A closing summary comparing the length classifications across all detected lines together: mostly long, mostly short, or a mixed pattern, rather than reading each line in isolation."
+        }
+      ]
+    }
+  ]
+}
