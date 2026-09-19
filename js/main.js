@@ -1,5 +1,5 @@
 import { validateFile, loadImageFromFile, validateDimensions, sanitizeToCanvas } from "./upload.js";
-import { analyzePalm, renderAnnotation } from "./analysis.js";
+import { analyzePalm, renderAnnotation, renderTrace } from "./analysis.js";
 import { generateReading } from "./rules.js";
 
 const dropzone = document.getElementById("dropzone");
@@ -15,6 +15,9 @@ const progressSection = document.getElementById("progress-section");
 const progressText = document.getElementById("progress-text");
 const resultsSection = document.getElementById("results-section");
 const annotatedCanvas = document.getElementById("annotated-canvas");
+const annotatedCanvas2 = document.getElementById("annotated-canvas-2");
+const canvasWrap = document.getElementById("canvas-wrap");
+const canvasLabels = document.querySelectorAll(".canvas-label");
 const readingText = document.getElementById("reading-text");
 const lowConfidenceMsg = document.getElementById("low-confidence-msg");
 const resetBtn = document.getElementById("reset-btn");
@@ -30,13 +33,28 @@ let currentFeatures = null;
 let currentBaseCanvas = null;
 let highlightedZone = null;
 
+function drawInto(canvasEl, sourceCanvas) {
+  canvasEl.width = sourceCanvas.width;
+  canvasEl.height = sourceCanvas.height;
+  canvasEl.getContext("2d").drawImage(sourceCanvas, 0, 0);
+}
+
 function showZoneHighlight(zoneKey) {
   if (!currentFeatures || !currentBaseCanvas) return;
   highlightedZone = zoneKey;
-  const rendered = renderAnnotation(currentBaseCanvas, currentFeatures, zoneKey);
-  annotatedCanvas.width = rendered.width;
-  annotatedCanvas.height = rendered.height;
-  annotatedCanvas.getContext("2d").drawImage(rendered, 0, 0);
+
+  if (!zoneKey) {
+    drawInto(annotatedCanvas, renderAnnotation(currentBaseCanvas, currentFeatures, null));
+    canvasWrap.classList.remove("split");
+    annotatedCanvas2.classList.add("hidden");
+    canvasLabels.forEach((el) => el.classList.add("hidden"));
+  } else {
+    drawInto(annotatedCanvas, renderTrace(currentBaseCanvas, currentFeatures, zoneKey));
+    drawInto(annotatedCanvas2, renderAnnotation(currentBaseCanvas, currentFeatures, zoneKey));
+    canvasWrap.classList.add("split");
+    annotatedCanvas2.classList.remove("hidden");
+    canvasLabels.forEach((el) => el.classList.remove("hidden"));
+  }
 
   readingText.querySelectorAll(".line-block[data-zone]").forEach((block) => {
     const isActive = block.dataset.zone === zoneKey;
@@ -157,10 +175,11 @@ async function runAnalysis() {
     currentFeatures = features;
     currentBaseCanvas = baseCanvas;
     highlightedZone = null;
+    canvasWrap.classList.remove("split");
+    annotatedCanvas2.classList.add("hidden");
+    canvasLabels.forEach((el) => el.classList.add("hidden"));
 
-    annotatedCanvas.width = annotated.width;
-    annotatedCanvas.height = annotated.height;
-    annotatedCanvas.getContext("2d").drawImage(annotated, 0, 0);
+    drawInto(annotatedCanvas, annotated);
 
     const reading = generateReading(features, confidence);
     renderReading(reading);
@@ -250,6 +269,9 @@ resetBtn.addEventListener("click", () => {
   analyzeBtn.disabled = true;
   resultsSection.classList.add("hidden");
   uploadSection.classList.remove("hidden");
+  canvasWrap.classList.remove("split");
+  annotatedCanvas2.classList.add("hidden");
+  canvasLabels.forEach((el) => el.classList.add("hidden"));
 });
 
 // Mode selector — Option A is functional; Option B is a disabled placeholder for now.

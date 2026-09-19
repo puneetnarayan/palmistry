@@ -87,7 +87,16 @@
     <section id="results-section" class="card hidden">
       <h2>Your reading</h2>
       <div class="results-layout">
-        <canvas id="annotated-canvas"></canvas>
+        <div id="canvas-wrap" class="canvas-wrap">
+          <div class="canvas-col">
+            <canvas id="annotated-canvas"></canvas>
+            <p class="canvas-label hidden" data-label="primary">Traced</p>
+          </div>
+          <div class="canvas-col">
+            <canvas id="annotated-canvas-2" class="hidden"></canvas>
+            <p class="canvas-label hidden" data-label="secondary">Detected fragments</p>
+          </div>
+        </div>
         <div id="reading-text" class="reading-text"></div>
       </div>
       <div id="low-confidence-msg" class="warning hidden">

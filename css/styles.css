@@ -216,12 +216,34 @@ body {
   flex-wrap: wrap;
 }
 
-#annotated-canvas {
+.canvas-wrap {
+  display: flex;
+  gap: 10px;
   max-width: 280px;
+}
+
+.canvas-wrap.split {
+  max-width: 420px;
+}
+
+.canvas-col {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.canvas-col canvas {
   width: 100%;
   height: auto;
   border-radius: 10px;
   background: #000;
+  display: block;
+}
+
+.canvas-label {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin: 6px 0 0;
 }
 
 .reading-text {
