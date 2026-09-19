@@ -17,6 +17,12 @@
   </header>
 
   <main class="container">
+    <nav class="view-tabs" aria-label="View">
+      <button id="tab-reader" class="view-tab active" data-view="reader" aria-pressed="true">Palm Reader</button>
+      <button id="tab-guide" class="view-tab" data-view="guide" aria-pressed="false">Guide</button>
+    </nav>
+
+    <div id="reader-view">
     <section class="mode-select" aria-label="Analysis mode">
       <button id="mode-client" class="mode-btn active" data-mode="client">
         Option A — Client-side
@@ -104,6 +110,15 @@
         the tips above and try again.
       </div>
       <button id="reset-btn" class="secondary-btn">Analyze another photo</button>
+    </section>
+    </div>
+
+    <section id="guide-view" class="hidden">
+      <p class="guide-intro">
+        A quick reference for the four lines this app looks for, and what "short vs. long" and
+        "straight vs. curved" mean for each — the same vocabulary your reading uses.
+      </p>
+      <div id="guide-grid" class="guide-grid"></div>
     </section>
   </main>
 

@@ -1,6 +1,7 @@
 import { validateFile, loadImageFromFile, validateDimensions, sanitizeToCanvas } from "./upload.js";
 import { analyzePalm, renderAnnotation, renderTrace } from "./analysis.js";
 import { generateReading } from "./rules.js";
+import { renderGuide } from "./guide.js";
 
 const dropzone = document.getElementById("dropzone");
 const fileInput = document.getElementById("file-input");
@@ -279,3 +280,25 @@ document.getElementById("mode-client").addEventListener("click", (e) => {
   document.querySelectorAll(".mode-btn").forEach((b) => b.classList.remove("active"));
   e.currentTarget.classList.add("active");
 });
+
+// View tabs — Palm Reader (the main flow above) vs. Guide (static reference content).
+const tabReader = document.getElementById("tab-reader");
+const tabGuide = document.getElementById("tab-guide");
+const readerView = document.getElementById("reader-view");
+const guideView = document.getElementById("guide-view");
+const guideGrid = document.getElementById("guide-grid");
+
+renderGuide(guideGrid);
+
+function setView(view) {
+  const showGuide = view === "guide";
+  readerView.classList.toggle("hidden", showGuide);
+  guideView.classList.toggle("hidden", !showGuide);
+  tabReader.classList.toggle("active", !showGuide);
+  tabGuide.classList.toggle("active", showGuide);
+  tabReader.setAttribute("aria-pressed", String(!showGuide));
+  tabGuide.setAttribute("aria-pressed", String(showGuide));
+}
+
+tabReader.addEventListener("click", () => setView("reader"));
+tabGuide.addEventListener("click", () => setView("guide"));
