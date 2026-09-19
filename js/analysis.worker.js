@@ -185,6 +185,16 @@ function detectLines(cv, imageData) {
 
   const features = {};
   for (const [name, zone] of Object.entries(ZONES)) {
+    // Pixel-space rectangle for this zone, so the UI can highlight "where on
+    // the hand" a line's interpretation came from, even when nothing was
+    // detected there.
+    const rect = {
+      x: origin.x + zone.box[0] * boxW,
+      y: origin.y + zone.box[1] * boxH,
+      width: (zone.box[2] - zone.box[0]) * boxW,
+      height: (zone.box[3] - zone.box[1]) * boxH,
+    };
+
     const matches = segments.filter((s) => {
       const midX = (s.x1 + s.x2) / 2;
       const midY = (s.y1 + s.y2) / 2;
@@ -192,7 +202,7 @@ function detectLines(cv, imageData) {
     });
 
     if (matches.length === 0) {
-      features[name] = { detected: false, segmentCount: 0, totalLength: 0, lengthRatio: 0, segments: [] };
+      features[name] = { detected: false, segmentCount: 0, totalLength: 0, lengthRatio: 0, segments: [], rect };
       continue;
     }
 
@@ -221,6 +231,7 @@ function detectLines(cv, imageData) {
       totalLength,
       lengthRatio: Math.min(1, maxSegmentLength / zoneDiag),
       shape,
+      rect,
       segments: matches,
     };
   }

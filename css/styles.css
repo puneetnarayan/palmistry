@@ -238,7 +238,33 @@ body {
   font-size: 1rem;
 }
 
-.reading-text .line-block { margin-bottom: 16px; }
+.reading-text .line-block {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  margin-left: -12px;
+  margin-right: -12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.reading-text .line-block.clickable {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.reading-text .line-block.clickable:hover {
+  background: rgba(183, 139, 255, 0.06);
+}
+
+.reading-text .line-block.clickable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.reading-text .line-block.clickable.active {
+  background: rgba(183, 139, 255, 0.12);
+  border-color: var(--accent);
+}
 
 .reading-text .summary-block {
   margin-top: 20px;

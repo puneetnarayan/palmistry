@@ -1,5 +1,5 @@
 import { validateFile, loadImageFromFile, validateDimensions, sanitizeToCanvas } from "./upload.js";
-import { analyzePalm } from "./analysis.js";
+import { analyzePalm, renderAnnotation } from "./analysis.js";
 import { generateReading } from "./rules.js";
 
 const dropzone = document.getElementById("dropzone");
@@ -26,6 +26,24 @@ const errorResetBtn = document.getElementById("error-reset-btn");
 const unsupportedBanner = document.getElementById("unsupported-banner");
 
 let sanitizedCanvas = null;
+let currentFeatures = null;
+let currentBaseCanvas = null;
+let highlightedZone = null;
+
+function showZoneHighlight(zoneKey) {
+  if (!currentFeatures || !currentBaseCanvas) return;
+  highlightedZone = zoneKey;
+  const rendered = renderAnnotation(currentBaseCanvas, currentFeatures, zoneKey);
+  annotatedCanvas.width = rendered.width;
+  annotatedCanvas.height = rendered.height;
+  annotatedCanvas.getContext("2d").drawImage(rendered, 0, 0);
+
+  readingText.querySelectorAll(".line-block[data-zone]").forEach((block) => {
+    const isActive = block.dataset.zone === zoneKey;
+    block.classList.toggle("active", isActive);
+    block.setAttribute("aria-pressed", String(isActive));
+  });
+}
 
 function checkBrowserSupport() {
   const supported =
@@ -132,9 +150,13 @@ async function runAnalysis() {
   progressText.textContent = "Loading vision engine…";
 
   try {
-    const { features, annotated, confidence } = await analyzePalm(sanitizedCanvas, (msg) => {
+    const { features, annotated, confidence, baseCanvas } = await analyzePalm(sanitizedCanvas, (msg) => {
       progressText.textContent = msg;
     });
+
+    currentFeatures = features;
+    currentBaseCanvas = baseCanvas;
+    highlightedZone = null;
 
     annotatedCanvas.width = annotated.width;
     annotatedCanvas.height = annotated.height;
@@ -175,13 +197,30 @@ function renderReading(reading) {
 
   for (const section of reading.sections) {
     const block = document.createElement("div");
-    block.className = "line-block";
+    block.className = "line-block clickable";
+    block.dataset.zone = section.key;
+    block.tabIndex = 0;
+    block.setAttribute("role", "button");
+    block.setAttribute("aria-pressed", "false");
+
     const h3 = document.createElement("h3");
     h3.textContent = section.label;
     const p = document.createElement("p");
     p.textContent = section.text;
     block.appendChild(h3);
     block.appendChild(p);
+
+    const toggle = () => {
+      showZoneHighlight(highlightedZone === section.key ? null : section.key);
+    };
+    block.addEventListener("click", toggle);
+    block.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggle();
+      }
+    });
+
     readingText.appendChild(block);
   }
 
@@ -200,6 +239,9 @@ function renderReading(reading) {
 
 resetBtn.addEventListener("click", () => {
   sanitizedCanvas = null;
+  currentFeatures = null;
+  currentBaseCanvas = null;
+  highlightedZone = null;
   fileInput.value = "";
   cameraInput.value = "";
   previewWrap.classList.add("hidden");
