@@ -41,3 +41,35 @@ test("confidence note reflects detection confidence", () => {
   const low = generateReading({}, 0.1);
   assert.notEqual(high.confidenceNote, low.confidenceNote);
 });
+
+test("shape adds a curved/straight note only when there's enough data to judge it", () => {
+  const withShape = generateReading(
+    { heart: { detected: true, lengthRatio: 0.5, segmentCount: 2, shape: "curved" } },
+    0.9
+  );
+  const heart = withShape.sections.find((s) => s.key === "heart");
+  assert.match(heart.text, /curved path/);
+
+  const withoutShape = generateReading(
+    { heart: { detected: true, lengthRatio: 0.5, segmentCount: 1, shape: null } },
+    0.9
+  );
+  const heartNoShape = withoutShape.sections.find((s) => s.key === "heart");
+  assert.doesNotMatch(heartNoShape.text, /curved path|straight path/);
+});
+
+test("summary reflects the overall pattern across detected lines", () => {
+  const allLong = generateReading(
+    {
+      heart: { detected: true, lengthRatio: 0.9, segmentCount: 1 },
+      head: { detected: true, lengthRatio: 0.85, segmentCount: 1 },
+      life: { detected: true, lengthRatio: 0.8, segmentCount: 1 },
+      fate: { detected: true, lengthRatio: 0.95, segmentCount: 1 },
+    },
+    1
+  );
+  assert.match(allLong.summary, /lean toward length/);
+
+  const tooFew = generateReading({ heart: { detected: true, lengthRatio: 0.9, segmentCount: 1 } }, 0.5);
+  assert.match(tooFew.summary, /Too few lines/);
+});

@@ -203,11 +203,24 @@ function detectLines(cv, imageData) {
     const totalLength = matches.reduce((sum, s) => sum + s.length, 0);
     const maxSegmentLength = matches.reduce((max, s) => Math.max(max, s.length), 0);
     const zoneDiag = Math.hypot((zone.box[2] - zone.box[0]) * boxW, (zone.box[3] - zone.box[1]) * boxH);
+
+    // Shape (straight vs curved) from how much the matched segments' angles
+    // spread out: a real curved crease gets fragmented by Hough into pieces
+    // pointing in visibly different directions, while a straighter crease's
+    // fragments stay close to one angle. Needs at least 2 segments to judge.
+    let shape = null;
+    if (matches.length >= 2) {
+      const angles = matches.map((s) => s.angle);
+      const angleRange = Math.max(...angles) - Math.min(...angles);
+      shape = angleRange > 25 ? "curved" : "straight";
+    }
+
     features[name] = {
       detected: true,
       segmentCount: matches.length,
       totalLength,
       lengthRatio: Math.min(1, maxSegmentLength / zoneDiag),
+      shape,
       segments: matches,
     };
   }

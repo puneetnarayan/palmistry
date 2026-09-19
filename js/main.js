@@ -184,6 +184,18 @@ function renderReading(reading) {
     block.appendChild(p);
     readingText.appendChild(block);
   }
+
+  if (reading.summary) {
+    const summaryBlock = document.createElement("div");
+    summaryBlock.className = "line-block summary-block";
+    const h3 = document.createElement("h3");
+    h3.textContent = "Overall";
+    const p = document.createElement("p");
+    p.textContent = reading.summary;
+    summaryBlock.appendChild(h3);
+    summaryBlock.appendChild(p);
+    readingText.appendChild(summaryBlock);
+  }
 }
 
 resetBtn.addEventListener("click", () => {
